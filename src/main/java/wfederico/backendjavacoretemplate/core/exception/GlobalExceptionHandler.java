@@ -1,16 +1,16 @@
 package wfederico.backendjavacoretemplate.core.exception;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.slf4j.MDC;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.servlet.View;
+
 import wfederico.backendjavacoretemplate.core.web.ApiResponseBase;
 import wfederico.backendjavacoretemplate.domain.exception.BusinessLayerException;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
