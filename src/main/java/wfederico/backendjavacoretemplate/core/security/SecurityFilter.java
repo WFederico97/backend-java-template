@@ -25,6 +25,14 @@ public class SecurityFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/actuator")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs");
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException{
 
         //Retrieve client IP
@@ -58,7 +66,7 @@ public class SecurityFilter extends OncePerRequestFilter {
             response.setContentType("application/json");
 
             ApiResponseBase<Void> apiResponse = ApiResponseBase.<Void>builder()
-                .status(249)
+                .status(429)
                 .message("Too many requests")
                 .traceId(traceId)
                 .build();
