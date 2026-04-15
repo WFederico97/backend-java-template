@@ -6,4 +6,5 @@ public final class RequestMessageConstants {
     public static final  String PLAYERS_FOUND = "Jugadores encontrados";
     public static final  String PLAYER_UPDATED = "Jugador actualizado con exito";
     public static final  String PLAYER_DELETED = "Jugador eliminado con exito";
+    public static final  String PLAYER_PATCHED = "Jugador actualizado parcialmente con exito";
 }

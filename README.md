@@ -66,7 +66,7 @@ src/main/java/wfederico/backendjavacoretemplate/
 |   |   +-- out/
 |   |       +-- package-info.java                    Outbound port interfaces (persistence contracts). Empty.
 |   +-- service/
-|       +-- PlayerService.java                       CRUD orchestration: findAll, findById, create.
+|       +-- PlayerService.java                       CRUD orchestration: findAll (paged), findById, create, update, patch, delete.
 |
 +-- core/
 |   +-- config/
@@ -92,9 +92,10 @@ src/main/java/wfederico/backendjavacoretemplate/
     +-- adapter/
     |   +-- in/
     |   |   +-- controller/
-    |   |   |   +-- PlayerController.java            @RestController /api/v1/players. GET /{id}, POST.
+    |   |   |   +-- PlayerController.java            @RestController /api/v1/players. Full CRUD: GET (paged), GET /{id}, POST, PUT /{id}, PATCH /{id}, DELETE /{id}.
     |   |   +-- dto/
     |   |       +-- PlayerRequestDTO.java            Inbound payload. @NotNull + @Pattern validations.
+    |   |       +-- PlayerPatchDTO.java              Partial update payload. All fields optional. @Pattern on name fields.
     |   |       +-- PlayerResponseDTO.java           Outbound payload. @JsonProperty snake_case mapping.
     |   +-- out/
     |       +-- repository/
@@ -119,7 +120,7 @@ src/main/java/wfederico/backendjavacoretemplate/
 
 | Component | Description |
 |---|---|
-| `PlayerService` | `@Service`. Injected dependencies: `PlayerRepository`, `ModelMapper`. Methods: `getAllPlayers()` returns `List<PlayerResponseDTO>` via stream-map. `getPlayerById(Long)` throws `BusinessLayerException(NOT_FOUND)` on empty Optional. `createPlayer(PlayerRequestDTO)` maps DTO to entity, persists, maps back. All read methods `@Transactional(readOnly = true)`. |
+| `PlayerService` | `@Service`. Injected dependencies: `PlayerRepository`, `ModelMapper`. Methods: `getAllPlayers()` returns unpaged `List<PlayerResponseDTO>`. `getAllPlayersPaged(Pageable)` returns `Page<PlayerResponseDTO>` with sorting. `getPlayerById(Long)` throws `BusinessLayerException(NOT_FOUND)` on empty Optional. `createPlayer(PlayerRequestDTO)` maps DTO to entity, persists, maps back. `updatePlayer(Long, PlayerRequestDTO)` fetches existing entity, applies full field replacement, persists. `patchPlayer(Long, PlayerPatchDTO)` applies null-safe partial field mutations. `deletePlayer(Long)` fetches entity or throws NOT_FOUND, then deletes. Private `findPlayerOrThrow(Long)` extracts shared lookup logic. Read methods `@Transactional(readOnly = true)`, write methods `@Transactional`. |
 | `port.in/` | Empty. Intended for use-case interfaces (e.g., `PlayerUseCase`). Not yet wired. |
 | `port.out/` | Empty. Intended for repository port interfaces. `PlayerService` currently depends directly on `PlayerRepository` (infra leak). |
 
@@ -141,11 +142,12 @@ src/main/java/wfederico/backendjavacoretemplate/
 
 | Component | Description |
 |---|---|
-| `PlayerController` | `@RestController` at `/api/v1/players`. `GET /{id}` returns single player. `POST ""` accepts `@Valid @RequestBody PlayerRequestDTO`. Both endpoints wrap response in `ApiResponseBase` with traceId from MDC. Tagged for Swagger grouping. |
+| `PlayerController` | `@RestController` at `/api/v1/players`. Full CRUD: `GET` (paginated list with `page`, `size`, `sortBy`, `direction` params), `GET /{id}` (single), `POST` (create), `PUT /{id}` (full update), `PATCH /{id}` (partial update via `PlayerPatchDTO`), `DELETE /{id}` (delete). All endpoints wrap response in `ApiResponseBase` with traceId from MDC. `@Operation`, `@Parameter`, and `@ApiResponse` OpenAPI annotations on each method. Tagged for Swagger grouping. |
 | `PlayerRequestDTO` | `@NotNull` on all fields. `@Pattern` regex on `firstName`, `lastName` (unicode letters, numbers, common punctuation). `@JsonProperty` snake_case serialization. |
+| `PlayerPatchDTO` | Partial update payload. All fields optional. `@Pattern` on `firstName`, `lastName` fields. |
 | `PlayerResponseDTO` | Read-only projection. Declared `final class`. `@JsonProperty` snake_case. |
 | `PlayerRepository` | `JpaRepository<PlayerEntity, Long>`. No custom query methods. |
-| `infra.entity/` | Unused. `package-info.java` only. Entities are under `domain.model`. |
+| `infra.entity/` | Unused. `package-info.java` only. Entities are defined in `domain.model.*`. |
 
 ---
 
@@ -207,12 +209,14 @@ Multi-stage build:
 
 Base path: `/api/v1/players`
 
-| Method | Path | Request Body | Response | Status |
-|---|---|---|---|---|
-| `GET` | `/api/v1/players/{id}` | -- | `ApiResponseBase<PlayerResponseDTO>` | 200 / 404 |
-| `POST` | `/api/v1/players` | `PlayerRequestDTO` (JSON) | `ApiResponseBase<PlayerResponseDTO>` | 201 / 400 |
-
-`GET /api/v1/players` (list all) is implemented in `PlayerService.getAllPlayers()` but **not exposed** via a controller endpoint.
+| Method | Path | Query Params | Request Body | Response | Status |
+|---|---|---|---|---|---|
+| `GET` | `/api/v1/players` | `page` (default 0), `size` (default 10), `sortBy` (default `id`), `direction` (default `asc`) | -- | `ApiResponseBase<Page<PlayerResponseDTO>>` | 200 / 404 |
+| `GET` | `/api/v1/players/{id}` | -- | -- | `ApiResponseBase<PlayerResponseDTO>` | 200 / 404 |
+| `POST` | `/api/v1/players` | -- | `PlayerRequestDTO` (JSON) | `ApiResponseBase<PlayerResponseDTO>` | 201 / 400 |
+| `PUT` | `/api/v1/players/{id}` | -- | `PlayerRequestDTO` (JSON) | `ApiResponseBase<PlayerResponseDTO>` | 200 / 400 / 404 |
+| `PATCH` | `/api/v1/players/{id}` | -- | `PlayerPatchDTO` (JSON, all fields optional) | `ApiResponseBase<PlayerResponseDTO>` | 200 / 400 / 404 |
+| `DELETE` | `/api/v1/players/{id}` | -- | -- | `ApiResponseBase<Void>` | 200 / 404 |
 
 Swagger UI: `http://localhost:8080/swagger-ui.html`
 
@@ -251,9 +255,8 @@ Actuator endpoints exposed: `/actuator/health`, `/actuator/info`, `/actuator/pro
 3. **Postgres volume**: `compose.yaml` mounts at `/var/lib/postgresql` (not `/var/lib/postgresql/data`). PostgreSQL 18+ images expect this mount point for `pg_ctlcluster` compatibility, but existing data at `/var/lib/postgresql/data` from older images causes a startup error. Delete the volume on image upgrade.
 4. **`infra.entity` package**: contains only `package-info.java`. Entities are defined in `domain.model.*`. The package is vestigial.
 5. **Hexagonal port interfaces not wired**: `application.port.in` and `application.port.out` are empty. `PlayerService` directly depends on `PlayerRepository` (infrastructure adapter), violating the ports-and-adapters dependency rule.
-6. **`getAllPlayers()` not exposed**: `PlayerService.getAllPlayers()` exists but no `@GetMapping` in the controller invokes it.
-7. **Blacklist 403 response**: returns empty body (no `ApiResponseBase` JSON), inconsistent with the 429 rate-limit response.
-8. **GraphQL schemas empty**: `src/main/resources/graphql/` and `src/main/resources/graphql-client/` are empty. `spring-boot-starter-graphql` and DGS codegen plugin are configured but non-functional.
+6. **Blacklist 403 response**: returns empty body (no `ApiResponseBase` JSON), inconsistent with the 429 rate-limit response.
+7. **GraphQL schemas empty**: `src/main/resources/graphql/` and `src/main/resources/graphql-client/` are empty. `spring-boot-starter-graphql` and DGS codegen plugin are configured but non-functional.
 
 ---
 
@@ -268,11 +271,11 @@ Actuator endpoints exposed: `/actuator/health`, `/actuator/info`, `/actuator/pro
 
 ### API / Controller
 
-- [ ] Expose `GET /api/v1/players` endpoint in `PlayerController` for `getAllPlayers()`.
-- [ ] Implement `PUT /api/v1/players/{id}` (update).
-- [ ] Implement `DELETE /api/v1/players/{id}` (delete).
-- [ ] Implement `PATCH /api/v1/players/{id}` (partial update) if needed.
-- [ ] Add pagination support (`Pageable`, `Page<PlayerResponseDTO>`) to list endpoint.
+- [x] Expose `GET /api/v1/players` endpoint in `PlayerController` for `getAllPlayers()`.
+- [x] Implement `PUT /api/v1/players/{id}` (update).
+- [x] Implement `DELETE /api/v1/players/{id}` (delete).
+- [x] Implement `PATCH /api/v1/players/{id}` (partial update).
+- [x] Add pagination support (`Pageable`, `Page<PlayerResponseDTO>`) to list endpoint.
 
 ### Security
 
@@ -358,4 +361,3 @@ Requires PostgreSQL, Redis, and Kafka running locally. Set environment variables
 ```bash
 ./mvnw spring-boot:run
 ```
-

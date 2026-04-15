@@ -2,10 +2,13 @@ package wfederico.backendjavacoretemplate.application.service;
 
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import wfederico.backendjavacoretemplate.infra.adapter.out.repository.PlayerRepository;
+import wfederico.backendjavacoretemplate.infra.adapter.in.dto.PlayerPatchDTO;
 import wfederico.backendjavacoretemplate.infra.adapter.in.dto.PlayerRequestDTO;
 import wfederico.backendjavacoretemplate.infra.adapter.in.dto.PlayerResponseDTO;
 import wfederico.backendjavacoretemplate.domain.exception.BusinessLayerException;
@@ -36,6 +39,15 @@ public class PlayerService {
     }
 
     @Transactional(readOnly = true)
+    public Page<PlayerResponseDTO> getAllPlayersPaged(Pageable pageable) {
+        Page<PlayerEntity> page = _playerRepository.findAll(pageable);
+        if (page.isEmpty()) {
+            throw new BusinessLayerException(PLAYERS_NOT_FOUND, HttpStatus.NOT_FOUND);
+        }
+        return page.map(player -> _modelMapper.map(player, PlayerResponseDTO.class));
+    }
+
+    @Transactional(readOnly = true)
     public PlayerResponseDTO getPlayerById(Long id){
         PlayerEntity player = _playerRepository.findById(id).orElseThrow(() ->
                 new BusinessLayerException(PLAYER_NOT_FOUND, HttpStatus.NOT_FOUND));
@@ -63,6 +75,27 @@ public class PlayerService {
     }
 
     @Transactional
+    public PlayerResponseDTO patchPlayer(Long id, PlayerPatchDTO patchData) {
+        PlayerEntity existingPlayer = findPlayerOrThrow(id);
+
+        if (patchData.getFirstName() != null) {
+            existingPlayer.setFirstName(patchData.getFirstName());
+        }
+        if (patchData.getLastName() != null) {
+            existingPlayer.setLastName(patchData.getLastName());
+        }
+        if (patchData.getPosition() != null) {
+            existingPlayer.setPosition(patchData.getPosition());
+        }
+        if (patchData.getAlterPosition() != null) {
+            existingPlayer.setAlterPosition(patchData.getAlterPosition());
+        }
+
+        PlayerEntity savedPlayer = _playerRepository.save(existingPlayer);
+        return _modelMapper.map(savedPlayer, PlayerResponseDTO.class);
+    }
+
+    @Transactional
     public void deletePlayer(Long id){
         PlayerEntity existingPlayer = findPlayerOrThrow(id);
         _playerRepository.delete(existingPlayer);
@@ -72,6 +105,4 @@ public class PlayerService {
         return _playerRepository.findById(id)
                 .orElseThrow(() -> new BusinessLayerException(PLAYER_NOT_FOUND, HttpStatus.NOT_FOUND));
     }
-
-
 }
