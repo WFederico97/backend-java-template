@@ -14,7 +14,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import wfederico.backendjavacoretemplate.application.service.PlayerService;
+import wfederico.backendjavacoretemplate.application.port.in.PlayerUseCase;
 import wfederico.backendjavacoretemplate.core.constants.RequestMessageConstants;
 import wfederico.backendjavacoretemplate.core.web.ApiResponseBase;
 import wfederico.backendjavacoretemplate.infra.adapter.in.dto.PlayerPatchDTO;
@@ -26,7 +26,7 @@ import wfederico.backendjavacoretemplate.infra.adapter.in.dto.PlayerResponseDTO;
 @RequiredArgsConstructor
 @Tag(name = "Players", description = "API for player management")
 public class PlayerController {
-    private final PlayerService _playerService;
+    private final PlayerUseCase _playerService;
 
     @GetMapping
     @Operation(summary = "List all players (paginated)")

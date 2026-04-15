@@ -33,5 +33,8 @@ public class PlayerRequestDTO {
     @NotNull(message = ValidationConstants.PLAYER_ALTER_POSITION_REQUIRED)
     @JsonProperty("alter_position")
     private String alterPosition;
+
+    @JsonProperty("team_id")
+    private Long teamId;
 }
 

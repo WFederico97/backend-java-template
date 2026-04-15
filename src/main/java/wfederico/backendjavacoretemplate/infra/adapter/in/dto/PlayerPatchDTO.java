@@ -26,5 +26,8 @@ public class PlayerPatchDTO {
 
     @JsonProperty("alter_position")
     private String alterPosition;
+
+    @JsonProperty("team_id")
+    private Long teamId;
 }
 
