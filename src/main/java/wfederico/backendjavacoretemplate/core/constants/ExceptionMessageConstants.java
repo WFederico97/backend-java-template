@@ -11,5 +11,7 @@ public final class ExceptionMessageConstants {
     public static final  String PLAYER_NOT_FOUND = "No se encontró jugador con ese ID";
     /* Error message when a player list is empty */
     public static final  String PLAYERS_NOT_FOUND = "No hay registros de jugadores en la base de datos";
+    /* Error message when a team is not found */
+    public static final  String TEAM_NOT_FOUND = "No se encontró equipo con ese ID";
 }
 

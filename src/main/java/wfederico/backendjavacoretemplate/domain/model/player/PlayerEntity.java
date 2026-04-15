@@ -3,15 +3,21 @@ package wfederico.backendjavacoretemplate.domain.model.player;
 import jakarta.persistence.*;
 import lombok.*;
 import wfederico.backendjavacoretemplate.core.data.EntityBase;
+import wfederico.backendjavacoretemplate.domain.model.team.TeamEntity;
 
 @Entity
-@Table(name = "players")
+@Table(name = "players", indexes = {
+        @Index(name = "idx_players_last_name", columnList = "lastName"),
+        @Index(name = "idx_players_position", columnList = "position"),
+        @Index(name = "idx_players_team_id", columnList = "team_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class PlayerEntity extends EntityBase {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -28,5 +34,7 @@ public class PlayerEntity extends EntityBase {
     @Column(nullable = false)
     private String alterPosition;
 
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    private TeamEntity team;
 }
