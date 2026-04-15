@@ -1,9 +1,12 @@
 package wfederico.backendjavacoretemplate.core.security;
 
 import tools.jackson.databind.ObjectMapper;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -13,14 +16,17 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@EnableConfigurationProperties(RateLimitProperties.class)
 public class SecurityConfig {
 
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final RateLimitProperties rateLimitProperties;
 
-    public SecurityConfig(StringRedisTemplate redisTemplate, ObjectMapper objectMapper) {
+    public SecurityConfig(StringRedisTemplate redisTemplate, ObjectMapper objectMapper, RateLimitProperties rateLimitProperties) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
+        this.rateLimitProperties = rateLimitProperties;
     }
 
     @Bean
@@ -32,8 +38,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                        .anyRequest().permitAll() // TODO: Configure proper authorization rules per project
+                        .requestMatchers(HttpMethod.GET, "/api/**").hasAuthority("SCOPE_read")
+                        .requestMatchers(HttpMethod.POST, "/api/**").hasAuthority("SCOPE_write")
+                        .requestMatchers(HttpMethod.PUT, "/api/**").hasAuthority("SCOPE_write")
+                        .requestMatchers(HttpMethod.PATCH, "/api/**").hasAuthority("SCOPE_write")
+                        .requestMatchers(HttpMethod.DELETE, "/api/**").hasAuthority("SCOPE_write")
+                        .anyRequest().authenticated()
                 )
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
                 .addFilterBefore(securityFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -41,7 +53,6 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilter securityFilter() {
-        return new SecurityFilter(redisTemplate, objectMapper);
+        return new SecurityFilter(redisTemplate, objectMapper, rateLimitProperties);
     }
 }
-
