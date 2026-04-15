@@ -77,6 +77,9 @@ services:
       - '3000:3000'
       - '4317:4317'
       - '4318:4318'
+    volumes:
+      - ./grafana/provisioning-dashboards.yml:/otel-lgtm/grafana/conf/provisioning/dashboards/custom.yml
+      - ./grafana/dashboards:/var/lib/grafana/dashboards/custom
 
 volumes:
   postgres_data:
