@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: mi_base_de_datos
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: admin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7.4
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build and test
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: mi_base_de_datos
+          DB_USER: postgres
+          DB_PASSWORD: admin
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          KAFKA_BROKER: localhost:9092
+          SPRING_PROFILES_ACTIVE: dev
+        run: ./mvnw verify -B
+
+      - name: Build Docker image
+        run: docker build -t backend-java-core-template:${{ github.sha }} .
+
+  docker-push:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t backend-java-core-template:latest .
+
+      # Uncomment and configure for your registry:
+      # - name: Push to registry
+      #   run: |
+      #     docker tag backend-java-core-template:latest <REGISTRY>/backend-java-core-template:latest
+      #     docker push <REGISTRY>/backend-java-core-template:latest
+
