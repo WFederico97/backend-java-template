@@ -1,0 +1,19 @@
+# Development profile
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  flyway:
+    enabled: false
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+
+logging:
+  level:
+    wfederico.backendjavacoretemplate: DEBUG
+    org.hibernate.SQL: DEBUG
+
