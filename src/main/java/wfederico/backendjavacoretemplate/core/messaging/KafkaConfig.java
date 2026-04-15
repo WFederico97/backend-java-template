@@ -27,6 +27,9 @@ public class KafkaConfig {
     @Value("${spring.kafka.consumer.group-id:my-microservice-group}")
     private String groupId;
 
+    @Value("${spring.kafka.listener.auto-startup:true}")
+    private boolean listenerAutoStartup;
+
     // --- Producer config ---
 
     @Bean
@@ -60,6 +63,7 @@ public class KafkaConfig {
     public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
+        factory.setAutoStartup(listenerAutoStartup);
         return factory;
     }
 }

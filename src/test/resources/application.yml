@@ -1,0 +1,10 @@
+# Test overrides — applied to all @SpringBootTest / slice-test contexts.
+# CI provides Postgres and Redis as service containers; Kafka is absent.
+spring:
+  docker:
+    compose:
+      enabled: false
+  kafka:
+    listener:
+      auto-startup: false
+
