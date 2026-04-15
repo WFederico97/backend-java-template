@@ -25,6 +25,7 @@ Spring Boot 4.0.3 REST microservice scaffold implementing a layered hexagonal ar
 - [Testing](#testing)
 - [Known Issues](#known-issues)
 - [TODO](#todo)
+- [Releases & Docker Image](#releases--docker-image)
 - [Running](#running)
 
 ---
@@ -388,6 +389,42 @@ Asciidoctor/REST Docs: plugin pending Spring Boot 4 compatibility. `spring-restd
 - [x] Configure CI/CD pipeline (`.github/workflows/ci.yml`).
 - [x] Add health check to `app` service in `compose.yaml`.
 - [x] Pin Docker image versions (`postgres:17`, `redis:7.4`, `apache/kafka:3.9.0`, `grafana/otel-lgtm:0.9.1`).
+- [x] Publish Docker image to GitHub Container Registry (GHCR) on version tag push.
+
+---
+
+## Releases & Docker Image
+
+This project follows [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`).
+
+### Creating a Release
+
+```bash
+# Tag the release
+git tag -a v1.0.0 -m "release: v1.0.0 — initial stable template"
+git push origin v1.0.0
+```
+
+Pushing a `v*.*.*` tag triggers the CI pipeline which:
+1. Runs the full test suite (`./mvnw verify`)
+2. Builds the Docker image
+3. Pushes to **GitHub Container Registry** with tags: `1.0.0`, `1.0`, `sha-<commit>`, `latest`
+
+### Pulling the Image
+
+```bash
+docker pull ghcr.io/wfederico97/backend-java-template:1.0.0
+docker pull ghcr.io/wfederico97/backend-java-template:latest
+```
+
+### Image Tags
+
+| Tag | Description |
+|---|---|
+| `1.0.0` | Exact semantic version |
+| `1.0` | Latest patch within minor |
+| `sha-abc1234` | Pinned to commit SHA |
+| `latest` | Most recent `main` push or tag |
 
 ---
 
